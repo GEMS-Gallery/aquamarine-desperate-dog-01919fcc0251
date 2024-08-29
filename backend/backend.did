@@ -1,0 +1,20 @@
+type UserStock = 
+ record {
+   amount: nat;
+   symbol: text;
+ };
+type Stock = 
+ record {
+   change: float64;
+   name: text;
+   price: float64;
+   symbol: text;
+ };
+service : {
+  buyStock: (text, nat) -> (bool);
+  getAccountBalance: () -> (float64) query;
+  getStockDetails: (text) -> (opt Stock) query;
+  getStocks: () -> (vec Stock) query;
+  getUserPortfolio: () -> (vec UserStock) query;
+  sellStock: (text, nat) -> (bool);
+}
