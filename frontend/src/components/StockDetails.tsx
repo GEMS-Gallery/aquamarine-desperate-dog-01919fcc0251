@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Typography, Button, TextField, Box } from '@mui/material';
+import { Typography, Button, TextField, Box, CircularProgress } from '@mui/material';
 import { Line } from 'react-chartjs-2';
 import { backend } from 'declarations/backend';
+import { retryApiCall } from '../utils/apiUtils';
 
 interface Stock {
   symbol: string;
@@ -15,17 +16,24 @@ function StockDetails() {
   const { symbol } = useParams<{ symbol: string }>();
   const [stock, setStock] = useState<Stock | null>(null);
   const [amount, setAmount] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchStockDetails = async () => {
       if (symbol) {
-        const result = await backend.getStockDetails(symbol);
-        if (result) {
-          setStock({
-            ...result,
-            price: Number(result.price),
-            change: Number(result.change)
-          });
+        try {
+          const result = await retryApiCall(() => backend.getStockDetails(symbol));
+          if (result) {
+            setStock({
+              ...result,
+              price: Number(result.price),
+              change: Number(result.change)
+            });
+          }
+        } catch (error) {
+          console.error('Failed to fetch stock details:', error);
+        } finally {
+          setLoading(false);
         }
       }
     };
@@ -34,28 +42,42 @@ function StockDetails() {
 
   const handleBuy = async () => {
     if (stock && amount > 0) {
-      const result = await backend.buyStock(stock.symbol, BigInt(amount));
-      if (result) {
-        alert('Stock purchased successfully!');
-      } else {
-        alert('Failed to purchase stock. Please check your balance.');
+      try {
+        const result = await retryApiCall(() => backend.buyStock(stock.symbol, BigInt(amount)));
+        if (result) {
+          alert('Stock purchased successfully!');
+        } else {
+          alert('Failed to purchase stock. Please check your balance.');
+        }
+      } catch (error) {
+        console.error('Error buying stock:', error);
+        alert('An error occurred while buying the stock. Please try again.');
       }
     }
   };
 
   const handleSell = async () => {
     if (stock && amount > 0) {
-      const result = await backend.sellStock(stock.symbol, BigInt(amount));
-      if (result) {
-        alert('Stock sold successfully!');
-      } else {
-        alert('Failed to sell stock. Please check your portfolio.');
+      try {
+        const result = await retryApiCall(() => backend.sellStock(stock.symbol, BigInt(amount)));
+        if (result) {
+          alert('Stock sold successfully!');
+        } else {
+          alert('Failed to sell stock. Please check your portfolio.');
+        }
+      } catch (error) {
+        console.error('Error selling stock:', error);
+        alert('An error occurred while selling the stock. Please try again.');
       }
     }
   };
 
+  if (loading) {
+    return <CircularProgress />;
+  }
+
   if (!stock) {
-    return <Typography>Loading...</Typography>;
+    return <Typography>Stock not found</Typography>;
   }
 
   const chartData = {

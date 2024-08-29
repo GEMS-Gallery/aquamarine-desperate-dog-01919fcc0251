@@ -1,18 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Container, Box, Button } from '@mui/material';
+import { AppBar, Toolbar, Typography, Container, Box, Button, CircularProgress } from '@mui/material';
 import { backend } from 'declarations/backend';
 import StockList from './components/StockList';
 import Portfolio from './components/Portfolio';
 import StockDetails from './components/StockDetails';
+import { retryApiCall } from './utils/apiUtils';
 
 function App() {
   const [balance, setBalance] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchBalance = async () => {
-      const result = await backend.getAccountBalance();
-      setBalance(Number(result));
+      try {
+        const result = await retryApiCall(() => backend.getAccountBalance());
+        setBalance(Number(result));
+      } catch (error) {
+        console.error('Failed to fetch account balance:', error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchBalance();
   }, []);
@@ -27,7 +35,7 @@ function App() {
           <Button color="inherit" component={Link} to="/">Stocks</Button>
           <Button color="inherit" component={Link} to="/portfolio">Portfolio</Button>
           <Typography variant="subtitle1" sx={{ marginLeft: 2 }}>
-            Balance: ${balance.toFixed(2)}
+            {loading ? <CircularProgress size={20} color="inherit" /> : `Balance: $${balance.toFixed(2)}`}
           </Typography>
         </Toolbar>
       </AppBar>

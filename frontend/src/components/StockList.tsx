@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress } from '@mui/material';
 import { backend } from 'declarations/backend';
+import { retryApiCall } from '../utils/apiUtils';
 
 interface Stock {
   symbol: string;
@@ -12,18 +13,29 @@ interface Stock {
 
 function StockList() {
   const [stocks, setStocks] = useState<Stock[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchStocks = async () => {
-      const result = await backend.getStocks();
-      setStocks(result.map(stock => ({
-        ...stock,
-        price: Number(stock.price),
-        change: Number(stock.change)
-      })));
+      try {
+        const result = await retryApiCall(() => backend.getStocks());
+        setStocks(result.map(stock => ({
+          ...stock,
+          price: Number(stock.price),
+          change: Number(stock.change)
+        })));
+      } catch (error) {
+        console.error('Failed to fetch stocks:', error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchStocks();
   }, []);
+
+  if (loading) {
+    return <CircularProgress />;
+  }
 
   return (
     <div>

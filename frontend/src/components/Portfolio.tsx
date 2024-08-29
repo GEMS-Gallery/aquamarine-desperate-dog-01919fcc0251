@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress } from '@mui/material';
 import { backend } from 'declarations/backend';
+import { retryApiCall } from '../utils/apiUtils';
 
 interface UserStock {
   symbol: string;
@@ -9,17 +10,28 @@ interface UserStock {
 
 function Portfolio() {
   const [portfolio, setPortfolio] = useState<UserStock[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchPortfolio = async () => {
-      const result = await backend.getUserPortfolio();
-      setPortfolio(result.map(stock => ({
-        ...stock,
-        amount: Number(stock.amount)
-      })));
+      try {
+        const result = await retryApiCall(() => backend.getUserPortfolio());
+        setPortfolio(result.map(stock => ({
+          ...stock,
+          amount: Number(stock.amount)
+        })));
+      } catch (error) {
+        console.error('Failed to fetch portfolio:', error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchPortfolio();
   }, []);
+
+  if (loading) {
+    return <CircularProgress />;
+  }
 
   return (
     <div>
